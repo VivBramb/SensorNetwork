@@ -24,6 +24,58 @@ get.param <- function(x){
   return (param)
 }
 
+decdc <- function(x,df) {
+  if (missing(df)) {
+    stop("df is a required input")
+  }
+  if (is.list(x)){
+    X <- x
+    x <- X$data
+  }else{
+    X <- NULL
+  }
+  if (nrow(x) < 2) {
+    warning("make sure that you have input your data as a column vector or a matrix")
+  }
+  if (!is.matrix(x) & length(dim(x))==1){
+    # if data is not a matrix, make it one
+    x <- matrix(x, ncol=1)
+  }
+  if (round(df) != df) {
+    df <- round(df)
+    warning("decdc needs integer decimation factor")
+  }
+  flen <- 12 * df
+  h <- as.vector(signal::fir1(flen, 0.8 / df))
+  xlen <- nrow(x)
+  #ensures that the output samples coincide with every df of the input samples
+  dc <- flen + floor(flen / 2) - round(df / 2) + seq(df, xlen, df)
+  y <- matrix(0, nrow = length(dc),ncol = ncol(x))
+  for (k in 1:ncol(x)) {
+    abc <- (2 * x[1, k]) - x[1 + (seq((flen + 1), 1, -1)), k]
+    bcd <- x[, k]
+    cde <- (2 * x[xlen, k]) - (x[xlen - c(1:(flen + 1),k)])
+    xx <- c(abc, bcd, cde)
+    v <- signal::conv(h,xx)
+    #   v <- pracma::conv(h,xx) # results identical and signal is a bit faster? SDR
+    y[,k] <- v[dc]
+  }
+  
+  if (is.list(X)){
+    X$data <- y
+    X$sampling_rate <- X$sampling_rate/df
+    h = sprintf('decdc(%d)',df) 
+    if ('history' %in% names(X) | is.null(X$history)){
+      X$history <- h 
+    }else{
+      X$history = c(X$history, h)
+    }
+    y = X
+  }
+  return(y)
+}
+
+
 ##### SENSOR 7 ######
 S7X1V21D1 <- read.csv("S7_X1_V21_L_D1_clean.csv", h=T)
 S7X1V10D1 <- read.csv("S7_X1_V10_L_D1_clean.csv", h=T)
@@ -38,6 +90,7 @@ S7X3V21D2 <- read.csv("S7_X3_V21_L_D2_clean.csv", h=T)
 S7X3V10D2 <- read.csv("S7_X3_V10_L_D2_clean.csv", h=T)
 S7X3V05D2 <- read.csv("S7_X3_V5_L_D2_clean.csv", h=T)
 
+
 S7X1V21D1s <- S7X1V21D1[30001:90000,] 
 S7X1V10D1s <- S7X1V10D1[30001:90000,] 
 S7X1V05D1s <- S7X1V05D1[30001:90000,]
@@ -50,6 +103,34 @@ S7X3V05D1s <- S7X3V05D1[30001:90000,]
 S7X3V21D2s <- S7X3V21D2[30001:90000,]
 S7X3V10D2s <- S7X3V10D2[30001:90000,]
 S7X3V05D2s <- S7X3V05D2[30001:90000,]
+
+S7X1V21D1sd <- decdc(S7X1V21D1sm,3) 
+S7X1V10D1sd <- decdc(S7X1V10D1sm,3) 
+S7X1V05D1sd <- decdc(S7X1V05D1sm,3)
+S7X2V21D1sd <- decdc(S7X2V21D1sm,3)
+S7X2V10D1sd <- decdc(S7X2V10D1sm,3)
+S7X2V05D1sd <- decdc(S7X2V05D1sm,3)
+S7X3V21D1sd <- decdc(S7X3V21D1sm,3)
+S7X3V10D1sd <- decdc(S7X3V10D1sm,3)
+S7X3V05D1sd <- decdc(S7X3V05D1sm,3)
+S7X3V21D2sd <- decdc(S7X3V21D2sm,3)
+S7X3V10D2sd <- decdc(S7X3V10D2sm,3)
+S7X3V05D2sd <- decdc(S7X3V05D2sm,3)
+
+S7X1V21D1sm <- as.matrix(S7X1V21D1s[,6:8]) 
+S7X1V10D1sm <- as.matrix(S7X1V10D1s[,6:8]) 
+S7X1V05D1sm <- as.matrix(S7X1V05D1s[,6:8])
+S7X2V21D1sm <- as.matrix(S7X2V21D1s[,6:8])
+S7X2V10D1sm <- as.matrix(S7X2V10D1s[,6:8])
+S7X2V05D1sm <- as.matrix(S7X2V05D1s[,6:8])
+S7X3V21D1sm <- as.matrix(S7X3V21D1s[,6:8])
+S7X3V10D1sm <- as.matrix(S7X3V10D1s[,6:8])
+S7X3V05D1sm <- as.matrix(S7X3V05D1s[,6:8])
+S7X3V21D2sm <- as.matrix(S7X3V21D2s[,6:8])
+S7X3V10D2sm <- as.matrix(S7X3V10D2s[,6:8])
+S7X3V05D2sm <- as.matrix(S7X3V05D2s[,6:8])
+
+str(S7X1V21D1sm)
 
 par(mfrow = c(3,3), mar = c(0,1,1,1))
 plot(S7X1V21D1s$X, pch = ".", ylim = c(1.45,2.05))
@@ -71,6 +152,16 @@ specgram(S7X3V21D1s$Y, Fs = 1000)
 specgram(S7X1V21D1s$Z, Fs = 1000)
 specgram(S7X2V21D1s$Z, Fs = 1000)
 specgram(S7X3V21D1s$Z, Fs = 1000)
+
+plot(S7X1V21D1s$X - S7Par[1,1], pch = ".", ylim = c(-0.2,0.2))
+plot(S7X2V21D1s$X - S7Par[4,1], col = "red", pch = '.', ylim = c(-0.2,0.2))
+plot(S7X3V21D1s$X - S7Par[7,1], col = "blue", pch = '.', ylim = c(-0.2,0.2))
+plot(S7X1V21D1s$Y - S7Par[1,2], pch = ".", ylim = c(-0.2,0.2))
+plot(S7X2V21D1s$Y - S7Par[4,2], col = "red", pch = '.', ylim = c(-0.2,0.2))
+plot(S7X3V21D1s$Y - S7Par[7,2], col = "blue", pch = '.', ylim = c(-0.2,0.2))
+plot(S7X1V21D1s$Z - S7Par[1,3], pch = ".", ylim = c(-0.2,0.2))
+plot(S7X2V21D1s$Z - S7Par[4,3], col = "red", pch = '.', ylim = c(-0.2,0.2))
+plot(S7X3V21D1s$Z - S7Par[7,3], col = "blue", pch = '.', ylim = c(-0.2,0.2))
 
 plot(S7X1V21D1s$X - S7Par[1,1], pch = ".", ylim = c(-0.2,0.2))
 plot(S7X2V21D1s$X - S7Par[4,1], col = "red", pch = '.', ylim = c(-0.2,0.2))
@@ -230,6 +321,24 @@ plot(sdZ~vel, data = parS7, col=as.factor(dist), ylim = c(0,0.08))
 plot(sdX~dist, data = parS7, col=as.factor(orient), ylim = c(0,0.08))
 plot(sdY~dist, data = parS7, col=as.factor(orient), ylim = c(0,0.08))
 plot(sdZ~dist, data = parS7, col=as.factor(orient), ylim = c(0,0.08))
+
+plot(sdX~as.numeric(vel), ylim = c(0,0.05), col = as.factor(dist), data = parS7)
+plot(sdY~as.numeric(vel), col = as.factor(dist), data = parS7)
+plot(sdZ~as.numeric(vel), col = as.factor(dist), data = parS7)
+plot(medianX~as.numeric(vel), col = sensor, data = parS7)
+plot(medianY~as.numeric(vel), col = sensor, data = parS7)
+plot(medianZ~as.numeric(vel), col = sensor, data = parS7)
+plot(meanX~as.numeric(vel), col = orient, data = parS7)
+plot(meanY~as.numeric(vel), col = orient, data = parS7)
+plot(meanZ~as.numeric(vel), col = orient, data = parS7)
+
+parS7B <- parS7
+parS7B$planar_vel <- sqrt(par$meanY^2 + par$meanZ^2 + par$meanX^2)
+plot(planar_vel~as.numeric(vel), col = orient, data = parS7B)
+plot(planar_vel~as.numeric(vel), col = orient, data = parS7B)
+View(parS7B)
+
+
 
 ##### SENSOR 2 ######
 S2X1V21D1 <- read.csv("S2_X1_V21_L_D1_clean.csv", h=T)
@@ -724,4 +833,84 @@ plot(S4X1V05D1s$Y - S4Par[3,2], pch = '.', ylim = c(-0.2,0.2))
 plot(S4X1V05D2s$Y - S4Par[6,2], pch = '.', ylim = c(-0.2,0.2))
 plot(S4X1V05D1s$Z - S4Par[3,3], pch = '.', ylim = c(-0.2,0.2))
 plot(S4X1V05D2s$Z - S4Par[6,3], pch = '.', ylim = c(-0.2,0.2))
+
+#### SENSOR 8 ####
+
+S8X1V21D1 <- read.csv("S8_X1_V21_L_D1_clean.csv", h=T)
+S8X1V10D1 <- read.csv("S8_X1_V10_L_D1_clean.csv", h=T)
+S8X1V05D1 <- read.csv("S8_X1_V5_L_D1_clean.csv", h=T)
+S8X1V21D2 <- read.csv("S8_X1_V21_L_D2_clean.csv", h=T)
+S8X1V10D2 <- read.csv("S8_X1_V10_L_D2_clean.csv", h=T)
+S8X1V05D2 <- read.csv("S8_X1_V5_L_D2_clean.csv", h=T)
+
+S8X1V21D1s <- S8X1V21D1[30001:90000,] 
+S8X1V10D1s <- S8X1V10D1[30001:90000,] 
+S8X1V05D1s <- S8X1V05D1[30001:90000,]
+S8X1V21D2s <- S8X1V21D2[30001:90000,]
+S8X1V10D2s <- S8X1V10D2[30001:90000,]
+S8X1V05D2s <- S8X1V05D2[30001:90000,]
+
+S8X1V21D1par <- get.param(S8X1V21D1s)
+S8X1V10D1par <- get.param(S8X1V10D1s)
+S8X1V05D1par <- get.param(S8X1V05D1s)
+S8X1V21D2par <- get.param(S8X1V21D2s)
+S8X1V10D2par <- get.param(S8X1V10D2s)
+S8X1V05D2par <- get.param(S8X1V05D2s)
+
+
+S8Par <- rbind(S8X1V21D1par,S8X1V10D1par,S8X1V05D1par,S8X1V21D2par,S8X1V10D2par,S8X1V05D2par)
+
+row.names(S8Par) <- c('S8X1V21D1','S8X1V10D1','S8X1V05D1','S8X1V21D2','S8X1V10D2','S8X1V05D2')
+S8Pardf<-as.data.frame(S8Par)
+orient <- c(1,1,1,1,1,1)
+vel<-rep(c(21,10,5),2)
+dist<- c(rep(0.3,3),rep(10,3))
+parS8<- as.data.frame(cbind(S8Par,orient,vel,dist))
+str(parS8)
+parS8$orient<-as.factor(parS8$orient)
+
+par(mfrow = c(2,3), mar = c(0,1,1,1))
+#plot(sdX~vel, data = parS8, col=as.factor(dist), ylim = c(0,0.08))
+#plot(sdY~vel, data = parS8, col=as.factor(dist), ylim = c(0,0.08))
+#plot(sdZ~vel, data = parS8, col=as.factor(dist), ylim = c(0,0.08))
+#plot(sdX~dist, data = parS8, col=as.factor(vel), ylim = c(0,0.08))
+#plot(sdY~dist, data = parS8, col=as.factor(vel), ylim = c(0,0.08))
+#plot(sdZ~dist, data = parS8, col=as.factor(vel), ylim = c(0,0.08))
+
+par(mfrow = c(3,2), mar = c(0,1,1,1))
+plot(S8X1V21D1s$X - S8Par[1,1], pch = '.', ylim = c(-0.2,0.2))
+plot(S8X1V21D2s$X - S8Par[4,1], pch = '.', ylim = c(-0.2,0.2))
+plot(S8X1V21D1s$Y - S8Par[1,2], pch = '.', ylim = c(-0.2,0.2))
+plot(S8X1V21D2s$Y - S8Par[4,2], pch = '.', ylim = c(-0.2,0.2))
+plot(S8X1V21D1s$Z - S8Par[1,3], pch = '.', ylim = c(-0.2,0.2))
+plot(S8X1V21D2s$Z - S8Par[4,3], pch = '.', ylim = c(-0.2,0.2))
+
+#plot(S8X3V10D1s$X, col = "blue", pch = '.', ylim = c(1.45,2.05))
+#plot(S8X3V10D2s$X, col = "blue", pch = '.', ylim = c(1.45,2.05))
+#plot(S8X3V10D1s$Y, col = "blue", pch = '.', ylim = c(1.55,2.15))
+#plot(S8X3V10D2s$Y, col = "blue", pch = '.', ylim = c(1.55,2.15))
+#plot(S8X3V10D1s$Z, col = "blue", pch = '.', ylim = c(1.45,2.05))
+#plot(S8X3V10D2s$Z, col = "blue", pch = '.', ylim = c(1.45,2.05))
+
+plot(S8X1V10D1s$X - S8Par[2,1], pch = '.', ylim = c(-0.2,0.2))
+plot(S8X1V10D2s$X - S8Par[5,1], pch = '.', ylim = c(-0.2,0.2))
+plot(S8X1V10D1s$Y - S8Par[2,2], pch = '.', ylim = c(-0.2,0.2))
+plot(S8X1V10D2s$Y - S8Par[5,2], pch = '.', ylim = c(-0.2,0.2))
+plot(S8X1V10D1s$Z - S8Par[2,3], pch = '.', ylim = c(-0.2,0.2))
+plot(S8X1V10D2s$Z - S8Par[5,3], pch = '.', ylim = c(-0.2,0.2))
+
+#plot(S8X3V05D1s$X, col = "blue", pch = '.', ylim = c(1.45,2.05))
+#plot(S8X3V05D2s$X, col = "blue", pch = '.', ylim = c(1.45,2.05))
+#plot(S8X3V05D1s$Y, col = "blue", pch = '.', ylim = c(1.55,2.15))
+#plot(S8X3V05D2s$Y, col = "blue", pch = '.', ylim = c(1.55,2.15))
+#plot(S8X3V05D1s$Z, col = "blue", pch = '.', ylim = c(1.45,2.05))
+#plot(S8X3V05D2s$Z, col = "blue", pch = '.', ylim = c(1.45,2.05))
+
+plot(S8X1V05D1s$X - S8Par[3,1], pch = '.', ylim = c(-0.2,0.2))
+plot(S8X1V05D2s$X - S8Par[6,1], pch = '.', ylim = c(-0.2,0.2))
+plot(S8X1V05D1s$Y - S8Par[3,2], pch = '.', ylim = c(-0.2,0.2))
+plot(S8X1V05D2s$Y - S8Par[6,2], pch = '.', ylim = c(-0.2,0.2))
+plot(S8X1V05D1s$Z - S8Par[3,3], pch = '.', ylim = c(-0.2,0.2))
+plot(S8X1V05D2s$Z - S8Par[6,3], pch = '.', ylim = c(-0.2,0.2))
+
 
