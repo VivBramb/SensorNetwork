@@ -28,6 +28,7 @@ get.param <- function(x){
   return (param)
 }
 
+####  read files  ####
 setwd("D:/Documents/My Research/SensorNetwork/Hawaii_test")
 temp = list.files(pattern="*.csv", full.names = TRUE)
 file.names <- rep(NA, length(temp))
@@ -40,6 +41,8 @@ for(i in 1:length(temp)) {
   assign( x = file_name, value = file_df, envir = .GlobalEnv)
 }
 
+### get parameters from files 
+# you can lapply the function to the list
 test01par <- get.param(test01)
 test02par <- get.param(test02)
 test03par <- get.param(test03)
@@ -58,6 +61,13 @@ test15par <- get.param(test15)
 test16par <- get.param(test16)
 test17par <- get.param(test17)
 test18par <- get.param(test18)
+test19par <- get.param(test19)
+test20par <- get.param(test20)
+test21par <- get.param(test21)
+test22par <- get.param(test22)
+test23par <- get.param(test23)
+test24par <- get.param(test24)
+
 
 test01tot <- cbind(test01,test01par)
 test02tot <- cbind(test02,test02par)
@@ -77,28 +87,41 @@ test15tot <- cbind(test15,test15par)
 test16tot <- cbind(test16,test16par)
 test17tot <- cbind(test17,test17par)
 test18tot <- cbind(test18,test18par)
+test19tot <- cbind(test19,test19par)
+test20tot <- cbind(test20,test20par)
+test21tot <- cbind(test21,test21par)
+test22tot <- cbind(test22,test22par)
+test23tot <- cbind(test23,test23par)
+test24tot <- cbind(test24,test24par)
 
+## create dataframe with readings
 all <- rbind (test01tot, test02tot, test03tot,
               test04tot, test05tot, test06tot,
               test07tot, test08tot, test09tot,
               test10tot, test11tot, test12tot,
               test13tot, test14tot, test15tot,
-              test16tot, test17tot, test18tot)
+              test16tot, test17tot, test18tot,
+              test19tot, test20tot, test21tot,
+              test22tot, test23tot, test24tot)
 str(all)
 colnames(all) <- c("seconds","x1","y1", "x2", "y2", "x3", "y3", "test")
 
-
+## create dataframe with parameters
 par <- rbind (test01par, test02par, test03par,
               test04par, test05par, test06par,
               test07par, test08par, test09par,
               test10par, test11par, test12par,
               test13par, test14par, test15par,
-              test16par, test17par, test18par)
+              test16par, test17par, test18par,
+              test19par, test20par, test21par,
+              test22par, test23par, test24par)
  
 par <- data.frame(par)
 
-par$test <- seq(1:18) 
+par$test <- seq(1:dim(par)[1]) 
 
+# plot mean of each test
+ # (black = sensor 2, blue = sensor 7, red = "sensor 6)
 ggplot(aes(test,meanX1),data = par)+
   geom_line()+
   geom_line(aes(test,meanY1), col = "black")+
@@ -107,6 +130,8 @@ ggplot(aes(test,meanX1),data = par)+
   geom_line(aes(test,meanX3), col = "red") +
   geom_line(aes(test,meanY3), col = "red")
 
+# plot median of each test
+ # (black = sensor 2, blue = sensor 7, red = "sensor 6)
 ggplot(aes(test,medianX1),data = par)+
   geom_line()+
   geom_line(aes(test,medianY1), col = "black")+
@@ -115,6 +140,8 @@ ggplot(aes(test,medianX1),data = par)+
   geom_line(aes(test,medianX3), col = "red") +
   geom_line(aes(test,medianY3), col = "red")
   
+# plot sd of each test
+# (black = sensor 2, blue = sensor 7, red = "sensor 6)
 ggplot(aes(test,sdX1),data = par)+
   geom_line()+
   geom_line(aes(test,sdY1), col = "black")+
@@ -123,49 +150,32 @@ ggplot(aes(test,sdX1),data = par)+
   geom_line(aes(test,sdX3), col = "red") +
   geom_line(aes(test,sdY3), col = "red")
 
-par$sensor <- rep(1:3,each = 2)
-par$val <- c(rep("mean",6), rep("median", 6), rep("sd",6))
 
+#### plot readings of each sensor #####
 sensor1 <- all[,c(1:3,8:10,15:16,21:22)]
 sensor2 <- all[,c(1,4:5,8,11:12,17:18,23:24)]
 sensor3 <- all[,c(1,6:7,8,13:14,19:20,25:26)]
 str(par)
-par[,10] <- as.factor(par[,10])
-par[,11] <- as.factor(par[,11])
-
-
-ggplot(sensor1,aes(Seconds,Real.1))+
+# sensor 1
+ggplot(sensor1,aes(seconds,x1))+
   ggtitle("sensor 1")+
   geom_point(col="black", cex = 0.5)+
-  geom_point(aes(Seconds, Real),col="red", cex = 0.5)+
+  geom_point(aes(seconds,y1),col="red", cex = 0.5)+
   theme_minimal()+
   facet_wrap(~test)
+# sensor 7
 ggplot(sensor2,aes(seconds,x2))+
   ggtitle("sensor 7")+
   geom_point(col="black", cex = 0.5)+
   geom_point(aes(seconds, y2),col="red", cex = 0.5)+
   theme_minimal()+
   facet_wrap(~test)
-ggplot(sensor3,aes(Seconds,Real.5))+
+# sensor 6
+ggplot(sensor3,aes(seconds,x3))+
   ggtitle("sensor 6")+
   geom_point(col="black", cex = 0.5)+
-  geom_point(aes(Seconds, Real.4),col="red", cex = 0.5)+
+  geom_point(aes(seconds,y3),col="red", cex = 0.5)+
   theme_minimal()+
   facet_wrap(~test)
 
-
-ggplot(sensor1,aes(Seconds,Real))+
-  ggtitle("sensor7")
-  geom_line(col="black")+
-  theme_minimal()+
-  facet_wrap(~test)
-
-ggplot(all,aes(seconds,y2))+
-  geom_line(col="black")+
-  theme_minimal()+
-  facet_wrap(~test)
-ggplot(all,aes(seconds,y3))+
-  geom_line(col="black")+
-  theme_minimal()+
-  facet_wrap(~test)
 
